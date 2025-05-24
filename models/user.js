@@ -39,6 +39,22 @@ const User = sequelize.define('User', {
   lastLogin: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  resetToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  resetTokenExpiry: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  emailVerificationToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  emailVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 }, {
   hooks: {

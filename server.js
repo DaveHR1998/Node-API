@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const { sequelize, testConnection } = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+const userRoutes = require('./routes/userRoutes');
 require('dotenv').config();
 
 // Initialize Express app
@@ -15,6 +17,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
 
 // Root route
 app.get('/', (req, res) => {

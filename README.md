@@ -4,17 +4,24 @@ A robust and secure authentication API built with Node.js, Express, and MySQL us
 
 ## Overview
 
-This project provides a secure login system with JWT authentication that can be used as a backend for web and mobile applications. It features user authentication, role-based access control, and secure password handling.
+This project provides a secure login system with JWT authentication that can be used as a backend for web and mobile applications. It features user authentication, role-based access control, task management, and secure password handling.
 
 ## Features
 
 - **Secure Authentication**: JWT-based authentication system
+- **Refresh Tokens**: Secure token refresh mechanism for extended sessions
 - **Password Security**: Passwords are hashed using bcrypt
+- **Password Management**: Reset, change password functionality
+- **Profile Management**: User profile updates
+- **Task Management**: CRUD operations for tasks
+- **User Administration**: Admin can manage users (activate/deactivate)
+- **Email Verification**: Email verification for new accounts
 - **Input Validation**: Request validation using express-validator
 - **Database Integration**: MySQL database with Sequelize ORM
 - **Migration Support**: Database migrations for version control
 - **Seeding**: Sample data seeding for development
 - **Role-Based Access**: User and admin role support
+- **Email Notifications**: Email service for password resets and verification
 - **Error Handling**: Comprehensive error handling
 
 ## Tech Stack
@@ -35,17 +42,29 @@ This project provides a secure login system with JWT authentication that can be 
 │   ├── config.js           # Sequelize configuration
 │   └── database.js         # Database connection setup
 ├── controllers/            # Request handlers
-│   └── authController.js   # Authentication logic
+│   ├── authController.js   # Authentication logic
+│   ├── taskController.js   # Task management logic
+│   └── userController.js   # User management logic
 ├── middlewares/            # Express middlewares
+│   ├── admin.js            # Admin role verification
+│   ├── auth.js             # Authentication verification
 │   └── validation.js       # Request validation
 ├── migrations/             # Database migrations
-│   └── 20250420-create-users-table.js
+│   ├── 20250420-create-users-table.js
+│   ├── 20250523-create-tasks.js
+│   └── 20250523-add-reset-token-to-users.js
 ├── models/                 # Sequelize models
+│   ├── index.js            # Models relationships
+│   ├── task.js             # Task model definition
 │   └── user.js             # User model definition
 ├── routes/                 # API routes
-│   └── authRoutes.js       # Authentication routes
+│   ├── authRoutes.js       # Authentication routes
+│   ├── taskRoutes.js       # Task management routes
+│   └── userRoutes.js       # User management routes
 ├── seeders/                # Database seeders
 │   └── 20250420-demo-users.js
+├── utils/                  # Utility functions
+│   └── emailService.js     # Email sending functionality
 ├── .env                    # Environment variables (not in repo)
 ├── .env.example            # Example environment variables
 ├── .sequelizerc            # Sequelize CLI configuration
@@ -112,8 +131,62 @@ The server will start on the port specified in your `.env` file (default: 7000).
 
 ### Authentication
 
+- **POST /api/auth/register**
+  - Registers a new user and sends a verification email
+  - Request body:
+    ```json
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "password": "Password123!"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Registration successful. Please check your email to verify your account.",
+      "user": {
+        "id": 1,
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com",
+        "role": "user",
+        "emailVerified": false
+      },
+      "token": "your.jwt.token"
+    }
+    ```
+
+- **GET /api/auth/verify-email/:token**
+  - Verifies a user's email address using the token sent via email
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Email verified successfully"
+    }
+    ```
+
+- **POST /api/auth/resend-verification-email**
+  - Resends the verification email if the user hasn't verified their email yet
+  - Request body:
+    ```json
+    {
+      "email": "john.doe@example.com"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "If your email is registered and not verified, you will receive a verification email"
+    }
+    ```
+
 - **POST /api/auth/login**
-  - Authenticates a user and returns a JWT token
+  - Authenticates a user and returns access and refresh tokens
   - Request body:
     ```json
     {
@@ -133,9 +206,150 @@ The server will start on the port specified in your `.env` file (default: 7000).
         "email": "john.doe@example.com",
         "role": "user"
       },
-      "token": "your.jwt.token"
+      "accessToken": "your.access.token",
+      "refreshToken": "your-refresh-token"
     }
     ```
+
+- **POST /api/auth/refresh-token**
+  - Refreshes the access token using a valid refresh token
+  - Request body:
+    ```json
+    {
+      "refreshToken": "your-refresh-token"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "success": true,
+      "accessToken": "your.new.access.token"
+    }
+    ```
+
+- **POST /api/auth/logout**
+  - Revokes a refresh token (logs out from current device)
+  - Request body:
+    ```json
+    {
+      "refreshToken": "your-refresh-token"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Logged out successfully"
+    }
+    ```
+
+- **POST /api/auth/logout-all** (requires authentication)
+  - Revokes all refresh tokens for the user (logs out from all devices)
+  - Response:
+    ```json
+    {
+      "success": true,
+      "message": "Logged out from all devices successfully"
+    }
+    ```
+
+- **POST /api/auth/request-password-reset**
+  - Requests a password reset link sent to user's email
+  - Request body:
+    ```json
+    {
+      "email": "user@example.com"
+    }
+    ```
+
+- **POST /api/auth/reset-password**
+  - Resets user's password using token received via email
+  - Request body:
+    ```json
+    {
+      "token": "reset_token_from_email",
+      "newPassword": "new_password"
+    }
+    ```
+
+- **POST /api/auth/change-password** (requires authentication)
+  - Changes user's password
+  - Request body:
+    ```json
+    {
+      "currentPassword": "current_password",
+      "newPassword": "new_password"
+    }
+    ```
+
+- **PUT /api/auth/profile** (requires authentication)
+  - Updates user's profile information
+  - Request body:
+    ```json
+    {
+      "firstName": "New First Name",
+      "lastName": "New Last Name"
+    }
+    ```
+
+### Tasks
+
+- **GET /api/tasks** (requires authentication)
+  - Gets all tasks for the authenticated user (admins can see all tasks)
+  - Optional query parameters: `status`, `priority`, `search`
+
+- **GET /api/tasks/:id** (requires authentication)
+  - Gets a specific task by ID
+
+- **POST /api/tasks** (requires authentication)
+  - Creates a new task
+  - Request body:
+    ```json
+    {
+      "title": "Task Title",
+      "description": "Task Description",
+      "status": "pending",
+      "dueDate": "2025-06-01T00:00:00.000Z",
+      "priority": "medium",
+      "userId": 1 // Optional, admin only
+    }
+    ```
+
+- **PUT /api/tasks/:id** (requires authentication)
+  - Updates an existing task
+  - Request body: Same as POST but all fields are optional
+
+- **DELETE /api/tasks/:id** (requires authentication)
+  - Deletes a task
+
+### User Management (Admin Only)
+
+- **GET /api/users** (requires admin)
+  - Gets all users
+
+- **GET /api/users/:id** (requires admin or self)
+  - Gets a specific user by ID
+
+- **POST /api/users** (requires admin)
+  - Creates a new user
+  - Request body:
+    ```json
+    {
+      "firstName": "New",
+      "lastName": "User",
+      "email": "new.user@example.com",
+      "password": "password",
+      "role": "user" // Optional, defaults to 'user'
+    }
+    ```
+
+- **PUT /api/users/:id** (requires admin or self)
+  - Updates a user
+  - Request body: Same as POST but all fields are optional
+  - Note: Only admins can change email, role, and active status
+
+- **PATCH /api/users/:id/toggle-status** (requires admin)
+  - Activates or deactivates a user account
 
 ## Default Users
 
@@ -169,6 +383,18 @@ NODE_ENV=development
 
 # JWT Secret (for token generation)
 JWT_SECRET=your_jwt_secret_key
+
+# Email Configuration
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_FROM=your_email@gmail.com
+EMAIL_FROM_NAME=API Service
+
+# Frontend URL (for password reset links)
+FRONTEND_URL=http://localhost:3000
 ```
 
 ## License
@@ -177,9 +403,10 @@ ISC
 
 ## Future Enhancements
 
-- User registration endpoint
-- Password reset functionality
-- Email verification
-- Refresh token implementation
-- Additional user management endpoints
-- Enhanced security features
+- Two-factor authentication
+- OAuth integration (Google, Facebook, etc.)
+- API rate limiting
+- Enhanced logging and monitoring
+- File upload functionality
+- Advanced search and filtering for tasks
+- Task notifications and reminders
